@@ -1,0 +1,17 @@
+import fs from "node:fs";
+import path from "node:path";
+import {createRequire} from "node:module";
+import ts from "typescript";
+import React from "react";
+import {renderToString} from "react-dom/server";
+const require=createRequire(import.meta.url);
+const temp=path.resolve(".runtime/prerender.cjs");
+fs.mkdirSync(path.dirname(temp),{recursive:true});
+fs.writeFileSync(temp,ts.transpileModule(fs.readFileSync("src/Portfolio.tsx","utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2022}}).outputText);
+const Portfolio=require(temp).default;
+const html=fs.readFileSync("docs/index.html","utf8");
+const marker='<div id="root"></div>';
+if(!html.includes(marker))throw new Error("Build the site before prerendering.");
+fs.writeFileSync("docs/index.html",html.replace(marker,'<div id="root">'+renderToString(React.createElement(Portfolio))+'</div>'));
+fs.writeFileSync("docs/.nojekyll", "");
+console.log("Prerendered GitHub Pages files ready in docs/");
